@@ -2,6 +2,8 @@ package arbis.crypto.api.controller;
 
 import arbis.crypto.api.domain.CryptoCurrencyRequest;
 import arbis.crypto.api.domain.CryptoCurrencyResponse;
+import arbis.crypto.api.exception.CustomException;
+import arbis.crypto.api.exception.ErrorExceptioni18n;
 import arbis.crypto.api.service.serviceImpl.CryptoCurrencyConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,16 +25,19 @@ public class RestController {
     CryptoCurrencyConverter cryptoCurrencyConverter;
 
     @PostMapping("/requestCrypto")
-    public ResponseEntity<CryptoCurrencyResponse> requestCrypto(@Valid @RequestBody CryptoCurrencyRequest cryptoCurrencyRequest, BindingResult result) throws Exception{
+    public ResponseEntity<CryptoCurrencyResponse> requestCrypto(@Valid @RequestBody CryptoCurrencyRequest cryptoCurrencyRequest, BindingResult result) throws Exception {
+        try {
+            CryptoCurrencyResponse cryptoCurrencyResponse = cryptoCurrencyConverter.callAPI(cryptoCurrencyRequest.getSymbols());
 
-        if(result.hasErrors()){
-            throw new Exception("Validation error");
+            logger.info("Exchange rates from {} is: {}", cryptoCurrencyRequest.getSymbols(), cryptoCurrencyResponse.getRates().entrySet() + cryptoCurrencyResponse.getTarget());
+
+            return new ResponseEntity<>(cryptoCurrencyResponse, HttpStatus.OK);
+        } catch (Exception e) {
+            if (result.hasErrors()) {
+                throw new CustomException(ErrorExceptioni18n.INVALID_CHARACTERS);
+            } else {
+                throw new CustomException(ErrorExceptioni18n.THERES_NO_CURRENCY);
+            }
         }
-
-        CryptoCurrencyResponse cryptoCurrencyResponse = cryptoCurrencyConverter.callAPI(cryptoCurrencyRequest.getSymbols());
-
-        logger.info("Exchange rates from {} is: {}",cryptoCurrencyRequest.getSymbols(),cryptoCurrencyResponse.getRates().entrySet() + cryptoCurrencyResponse.getTarget());
-
-        return new ResponseEntity<>(cryptoCurrencyResponse, HttpStatus.OK);
     }
 }
